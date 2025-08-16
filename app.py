@@ -1,43 +1,28 @@
 import streamlit as st
 from huggingface_hub import InferenceClient
 
-# Load Hugging Face API Key
+# Use your Hugging Face token securely from secrets
 HF_API_KEY = st.secrets["HF_API_KEY"]
 
-# Initialize Hugging Face Inference Client
-client = InferenceClient(api_key=HF_API_KEY)
+# Initialize client
+client = InferenceClient(token=HF_API_KEY)
 
-# Streamlit UI
 st.title("🤖 Hugging Face Chatbot")
 
-# Keep chat history
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+# Input box for user
+user_input = st.text_input("You:", "")
 
-# Display past messages
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+if st.button("Send") and user_input:
+    try:
+        # Use a Hugging Face chat model (LLaMA-3, Mistral, etc.)
+        response = client.chat.completions.create(
+            model="meta-llama/Llama-3-8b-chat-hf",  # Change if you want another model
+            messages=[{"role": "user", "content": user_input}],
+            max_tokens=200
+        )
 
-# Input box
-if user_input := st.chat_input("Type your message..."):
-    # Save user message
-    st.session_state.messages.append({"role": "user", "content": user_input})
-    with st.chat_message("user"):
-        st.markdown(user_input)
+        # Display response
+        st.write("**Bot:**", response.choices[0].message["content"])
 
-    # Generate response
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            try:
-                response = client.text_generation(
-                    model="meta-llama/Llama-2-7b-chat-hf",  # You can swap models
-                    prompt=user_input,
-                    max_new_tokens=300,
-                    temperature=0.7
-                )
-                st.markdown(response)
-                # Save assistant message
-                st.session_state.messages.append({"role": "assistant", "content": response})
-            except Exception as e:
-                st.error(f"Error: {e}")
+    except Exception as e:
+        st.error(f"Error: {e}")
