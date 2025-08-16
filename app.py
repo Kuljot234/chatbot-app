@@ -8,7 +8,7 @@ st.set_page_config(page_title="Chat Bot", page_icon="🤖")
 st.title("🤖 Chat Bot")
 
 # ✅ Your Hugging Face Token
-HF_API_KEY = "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"
+HF_API_KEY = "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"
 
 # ✅ Login to Hugging Face if token is set
 if HF_API_KEY and HF_API_KEY != "your_huggingface_api_key_here":
@@ -77,4 +77,5 @@ if prompt := st.chat_input("Ask your question:"):
         with st.spinner("Generating response..."):
             response = generate_response(prompt, model, tokenizer)
             st.markdown(response)
+
     st.session_state.Messages.append({"role": "assistant", "content": response})
