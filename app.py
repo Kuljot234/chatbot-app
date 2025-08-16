@@ -8,7 +8,7 @@ st.set_page_config(page_title="NeuroChat Clone", page_icon="🤖", layout="wide"
 st.title("🤖 NeuroChat Clone")
 
 # ✅ Load Hugging Face Token from Streamlit Secrets
-HF_API_KEY = st.secrets["HF_API_KEY"]
+HF_API_KEY = st.secrets["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"]
 
 # ✅ Login to Hugging Face
 login(token=HF_API_KEY)
@@ -73,3 +73,4 @@ if prompt := st.chat_input("💬 Ask something..."):
             st.markdown(response)
 
     st.session_state.Messages.append({"role": "assistant", "content": response})
+
