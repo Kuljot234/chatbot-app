@@ -1,78 +1,43 @@
 import streamlit as st
-from transformers import AutoModelForCausalLM, AutoTokenizer
-import torch
-from huggingface_hub import login
+from huggingface_hub import InferenceClient
 
-# ✅ Streamlit Page Config
-st.set_page_config(page_title="NeuroChat Clone", page_icon="🤖", layout="wide")
-st.title("🤖 NeuroChat Clone")
-
-# ✅ Load Hugging Face Token from Streamlit Secrets
+# Load Hugging Face API Key
 HF_API_KEY = st.secrets["HF_API_KEY"]
 
+# Initialize Hugging Face Inference Client
+client = InferenceClient(api_key=HF_API_KEY)
 
-# ✅ Login to Hugging Face
-login(token=HF_API_KEY)
+# Streamlit UI
+st.title("🤖 Hugging Face Chatbot")
 
-# ✅ Initialize session for chat history
-if "Messages" not in st.session_state:
-    st.session_state.Messages = []
+# Keep chat history
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-# ✅ Load model and tokenizer
-@st.cache_resource
-def load_model():
-    model_name = "ibm-granite/granite-3.3-2b-instruct"
-    try:
-        tokenizer = AutoTokenizer.from_pretrained(model_name, token=HF_API_KEY)
-        model = AutoModelForCausalLM.from_pretrained(
-            model_name, 
-            torch_dtype=torch.float32,   # safer for Streamlit Cloud (no GPU)
-            token=HF_API_KEY
-        )
-        return model, tokenizer
-    except Exception as e:
-        st.error(f"❌ Error loading model: {e}")
-        st.stop()
+# Display past messages
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
 
-# ✅ Generate model response
-def generate_response(prompt, model, tokenizer):
-    formatted_prompt = f"Human: {prompt}\nAI:"
-    inputs = tokenizer(formatted_prompt, return_tensors="pt")
-
-    with torch.no_grad():
-        outputs = model.generate(
-            **inputs,
-            max_new_tokens=250,
-            temperature=0.7,
-            do_sample=True,
-            top_p=0.9,
-            top_k=50,
-            pad_token_id=tokenizer.eos_token_id
-        )
-    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    return response.split("AI:")[-1].strip()
-
-# ✅ Load the model once
-with st.spinner("🚀 Loading model... Please wait."):
-    model, tokenizer = load_model()
-st.success("✅ Model loaded successfully!")
-
-# ✅ Render chat history
-for message in st.session_state.Messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-
-# ✅ Take user input and respond
-if prompt := st.chat_input("💬 Ask something..."):
-    st.session_state.Messages.append({"role": "user", "content": prompt})
+# Input box
+if user_input := st.chat_input("Type your message..."):
+    # Save user message
+    st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
-        st.markdown(prompt)
+        st.markdown(user_input)
 
+    # Generate response
     with st.chat_message("assistant"):
-        with st.spinner("🤖 Thinking..."):
-            response = generate_response(prompt, model, tokenizer)
-            st.markdown(response)
-
-    st.session_state.Messages.append({"role": "assistant", "content": response})
-
-
+        with st.spinner("Thinking..."):
+            try:
+                response = client.text_generation(
+                    model="meta-llama/Llama-2-7b-chat-hf",  # You can swap models
+                    prompt=user_input,
+                    max_new_tokens=300,
+                    temperature=0.7
+                )
+                st.markdown(response)
+                # Save assistant message
+                st.session_state.messages.append({"role": "assistant", "content": response})
+            except Exception as e:
+                st.error(f"Error: {e}")
